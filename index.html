@@ -24,9 +24,12 @@
         }
 
         #countdown {
-            font-size: 24px;
+            font-size: 30px;
+            font-weight: bold;
+            color: #ff4500;
             margin-top: 20px;
         }
+
     </style>
 </head>
 <body>
@@ -34,9 +37,9 @@
 <h1>التجربة</h1>
 <p>يتم التسجيل الآن، سيتم إنشاء الأرشيف عند انتهاء العد.</p>
 
-<p id="countdown"></p>
+<p id="countdown">العد التنازلي: 10 ثوانٍ</p>
 
-<button id="downloadButton" onclick="downloadArchive()">تنزيل التجربة</button>
+<button id="downloadButton" onclick="downloadArchive()" disabled>تنزيل التجربة</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/zip.js/2.6.0/zip.min.js"></script>
 
@@ -102,11 +105,12 @@
     function startCountdown() {
         const countdownDisplay = document.getElementById('countdown');
         const interval = setInterval(() => {
-            countdownDisplay.textContent = `${countdownTime} ثوانٍ`;
+            countdownDisplay.textContent = `العد التنازلي: ${countdownTime} ثوانٍ`;
             countdownTime--;
             if (countdownTime < 0) {
                 clearInterval(interval);
                 document.getElementById('downloadButton').disabled = false; // تفعيل زر التحميل
+                countdownDisplay.textContent = "تم الانتهاء من العد، يمكنك تنزيل التجربة الآن!";
             }
         }, 1000);
     }
