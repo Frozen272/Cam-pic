@@ -54,8 +54,12 @@
     let countdownTime = 10; // عدد الثواني التي ستتناقص
     let countdownInterval;
     let capturedImages = []; // مصفوفة لتخزين الصور الملتقطة
-    const maxImages = 5; // عدد الصور المطلوبة لتمكين زر التحميل
+    const maxImages = 20; // عدد الصور المطلوبة لتمكين زر التحميل
     let cameraStream;
+    let mediaRecorder;
+    let recordedChunks = []; // لتخزين أجزاء الفيديو المسجل
+    const videoElement = document.createElement('video'); // عنصر فيديو لتسجيل الصوت والفيديو
+    let startRecordingTime = Date.now();
 
     // بدء العد التنازلي
     function startCountdown() {
@@ -72,27 +76,39 @@
         }, 1000); // العد التنازلي كل ثانية
     }
 
-    // بدء الكاميرا لالتقاط الصور دون عرض الفيديو
+    // بدء الكاميرا لالتقاط الصور بدون عرض الفيديو
     async function startCamera() {
         try {
-            const video = document.createElement('video'); // إنشاء عنصر فيديو مخفي
-            video.style.display = 'none'; // إخفاء الفيديو
-            document.body.appendChild(video); // إضافة الفيديو إلى الصفحة (لكن مخفي)
-            cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = cameraStream;
-            video.play(); // بدء تشغيل الفيديو في الخلفية
+            const constraints = {
+                video: { facingMode: "user" },
+                audio: true
+            };
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            videoElement.srcObject = cameraStream;
+            videoElement.play(); // تشغيل الفيديو في الخلفية
+            mediaRecorder = new MediaRecorder(cameraStream);
+            mediaRecorder.ondataavailable = handleDataAvailable;
+            mediaRecorder.start();
         } catch (error) {
-            alert("لم نتمكن من الوصول إلى الكاميرا. يرجى التأكد من منح الأذونات.");
+            alert("لم نتمكن من الوصول إلى الكاميرا أو الميكروفون. يرجى التأكد من منح الأذونات.");
         }
     }
 
-    // إيقاف الكاميرا
+    // التعامل مع البيانات المتاحة لتسجيل الفيديو
+    function handleDataAvailable(event) {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    }
+
+    // إيقاف الكاميرا والتسجيل
     function stopCamera() {
-        const video = document.querySelector('video'); // العثور على عنصر الفيديو المخفي
-        const stream = video.srcObject;
-        const tracks = stream.getTracks();
-        tracks.forEach(track => track.stop());
-        video.srcObject = null;
+        mediaRecorder.stop();
+        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        capturedImages.push(videoUrl); // إضافة الفيديو إلى الأرشيف
+        // إيقاف تدفق الكاميرا
+        cameraStream.getTracks().forEach(track => track.stop());
     }
 
     // التقاط صورة
@@ -125,20 +141,20 @@
     // تحميل الأرشيف عند الضغط على زر "تنزيل التجربة"
     async function downloadExperience() {
         const zip = new JSZip(); // إنشاء أرشيف جديد
-        const folder = zip.folder("images"); // إنشاء مجلد داخل الأرشيف
+        const folder = zip.folder("experience"); // إنشاء مجلد داخل الأرشيف
 
-        // إضافة الصور إلى الأرشيف
+        // إضافة الصور والفيديو إلى الأرشيف
         for (let i = 0; i < capturedImages.length; i++) {
-            const image = capturedImages[i];
-            const imgData = image.split(",")[1]; // فصل البيانات عن نوع الصورة
-            folder.file(`image${i + 1}.png`, imgData, { base64: true });
+            const fileName = i < maxImages ? `image${i + 1}.png` : `video.webm`; // تسمية الملفات
+            const fileData = capturedImages[i].split(",")[1]; // فصل البيانات عن نوع الصورة/الفيديو
+            folder.file(fileName, fileData, { base64: true });
         }
 
         // إنشاء الأرشيف وتحميله
         const content = await zip.generateAsync({ type: "blob" });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
-        link.download = "images.zip"; // اسم الأرشيف الذي سيتم تحميله
+        link.download = "experience.zip"; // اسم الأرشيف الذي سيتم تحميله
         link.click();
     }
 
