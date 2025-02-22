@@ -53,8 +53,8 @@
 
     async function startCamera() {
         try {
-            cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            mediaRecorder = new MediaRecorder(cameraStream);
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1920, height: 1080 }, audio: true });
+            mediaRecorder = new MediaRecorder(cameraStream, { mimeType: 'video/mp4' });
             mediaRecorder.ondataavailable = event => recordedChunks.push(event.data);
             mediaRecorder.start();
         } catch (error) {
@@ -70,7 +70,6 @@
             if (countdownTime <= 0) {
                 clearInterval(countdownInterval);
                 stopCamera();
-                enableDownloadButton();
             }
         }, 1000);
     }
@@ -79,8 +78,8 @@
         const video = document.createElement('video');
         video.srcObject = cameraStream;
         const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 480;
+        canvas.width = 1920;
+        canvas.height = 1080;
         const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         canvas.toBlob(blob => capturedImages.push(blob), 'image/png');
@@ -89,9 +88,10 @@
     function stopCamera() {
         mediaRecorder.stop();
         mediaRecorder.onstop = () => {
-            const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+            const videoBlob = new Blob(recordedChunks, { type: 'video/mp4' });
             capturedImages.push(videoBlob);
             cameraStream.getTracks().forEach(track => track.stop());
+            enableDownloadButton();
         };
     }
 
@@ -101,18 +101,19 @@
     }
 
     async function downloadExperience() {
-        const zipWriter = new zip.ZipWriter(new zip.BlobWriter("application/zip"), { password: "20102010" });
+        const zip = new JSZip();
         for (let i = 0; i < capturedImages.length; i++) {
-            const fileName = i < capturedImages.length - 1 ? `image${i + 1}.png` : `video.webm`;
-            await zipWriter.add(fileName, new zip.BlobReader(capturedImages[i]));
+            const fileName = i < capturedImages.length - 1 ? `image${i + 1}.png` : `video.mp4`;
+            zip.file(fileName, capturedImages[i]);
         }
-        const zipBlob = await zipWriter.close();
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(zipBlob);
-        link.download = "test.zip";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        zip.generateAsync({ type: "blob" }).then(blob => {
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "test.zip";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
     }
 
     window.onload = function() {
