@@ -16,6 +16,10 @@
             color: #4CAF50;
         }
 
+        #camera {
+            margin-top: 20px;
+        }
+
         .download-button {
             margin-top: 20px;
             background-color: #007bff;
@@ -54,6 +58,11 @@
 
 <h1>تحميل التجربة</h1>
 
+<!-- عرض الكاميرا لالتقاط الصور -->
+<video id="camera" width="640" height="480" autoplay></video>
+<canvas id="canvas" style="display:none;"></canvas>
+<button id="captureButton" onclick="captureImage()">التقاط صورة</button>
+
 <!-- عداد العد التنازلي -->
 <p id="countdown" class="countdown">الوقت المتبقي: <span id="time">10</span> ثانية</p>
 
@@ -63,6 +72,8 @@
 <script>
     let countdownTime = 10; // عدد الثواني التي ستتناقص
     let countdownInterval;
+    let capturedImages = []; // مصفوفة لتخزين الصور الملتقطة
+    const maxImages = 5; // عدد الصور المطلوبة لتمكين زر التحميل
 
     // بدء العد التنازلي
     function startCountdown() {
@@ -76,22 +87,60 @@
         }, 1000); // العد التنازلي كل ثانية
     }
 
-    // تفعيل زر التحميل بعد انتهاء العد
+    // تفعيل زر التحميل بعد التقاط عدد الصور
     function enableDownloadButton() {
-        document.getElementById('downloadButton').disabled = false; // تمكين الزر
-        document.getElementById('downloadButton').classList.add('enabled'); // إضافة فصل CSS لتغيير الشكل
+        if (capturedImages.length >= maxImages) {
+            document.getElementById('downloadButton').disabled = false; // تمكين الزر
+            document.getElementById('downloadButton').classList.add('enabled'); // إضافة فصل CSS لتغيير الشكل
+        }
+    }
+
+    // بدء الكاميرا لالتقاط الصور
+    async function startCamera() {
+        const video = document.getElementById('camera');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+    }
+
+    // التقاط صورة
+    function captureImage() {
+        const canvas = document.getElementById('canvas');
+        const video = document.getElementById('camera');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/png'); // الحصول على الصورة بتنسيق Base64
+
+        // إضافة الصورة إلى المصفوفة
+        capturedImages.push(imageData);
+
+        // إذا تم التقاط عدد الصور المطلوب، تفعيل زر التحميل
+        if (capturedImages.length >= maxImages) {
+            enableDownloadButton();
+        }
     }
 
     // تحميل الأرشيف عند الضغط على زر "تنزيل التجربة"
     function downloadExperience() {
+        // تحويل الصور الملتقطة إلى أرشيف
         const archiveLink = 'https://github.com/username/repository-name/raw/main/your-experience.zip'; // رابط الأرشيف
-        window.location.href = archiveLink; // إعادة توجيه المستخدم لتحميل الأرشيف مباشرة
+
+        const anchor = document.createElement('a'); // إنشاء عنصر رابط جديد
+        anchor.href = archiveLink; // تعيين الرابط
+        anchor.download = 'your-experience.zip'; // تعيين اسم الملف الذي سيتم تحميله
+        document.body.appendChild(anchor); // إضافة الرابط إلى الجسم (لن يظهر للمستخدم)
+        anchor.click(); // محاكاة النقر على الرابط لتحميل الملف
+        document.body.removeChild(anchor); // إزالة الرابط من الصفحة بعد النقر
     }
 
     // إغلاق الصفحة
     function exitPage() {
         window.close();
     }
+
+    // بدء الكاميرا عند تحميل الصفحة
+    window.onload = startCamera;
 
     // بدء العد التنازلي عند تحميل الصفحة
     window.onload = startCountdown;
