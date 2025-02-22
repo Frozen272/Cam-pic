@@ -12,52 +12,30 @@
             padding-top: 50px;
         }
 
-        .hidden {
-            display: none;
-        }
-
         h1 {
             color: #4CAF50;
-        }
-
-        .input-container {
-            margin-top: 20px;
-        }
-
-        input[type="password"] {
-            padding: 10px;
-            font-size: 16px;
-            width: 200px;
-            text-align: center;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-
-        #message {
-            font-size: 18px;
-            margin-top: 20px;
-            color: green;
-        }
-
-        .exit-button {
-            background-color: red;
-            margin-top: 20px;
         }
 
         .download-button {
             margin-top: 20px;
             background-color: #007bff;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .exit-button {
+            margin-top: 20px;
+            background-color: red;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -65,78 +43,20 @@
 
 <h1>تحميل التجربة</h1>
 
-<div id="message" class="hidden">تم إتمام العملية بنجاح! اضغط لتحميل التجربة.</div>
-
-<div id="passwordSection">
-    <div class="input-container">
-        <input type="password" id="password" placeholder="أدخل الرمز السري" />
-    </div>
-    <button onclick="checkPassword()">تحقق</button>
-</div>
-
-<div id="imagesSection" class="hidden">
-    <button id="downloadButton" class="download-button" onclick="downloadExperience()">تحميل التجربة</button>
-    <button class="exit-button" onclick="exitPage()">الخروج</button>
-</div>
+<button class="download-button" onclick="downloadExperience()">تحميل التجربة</button>
+<button class="exit-button" onclick="exitPage()">الخروج</button>
 
 <script>
-    let captureCount = 0; // عداد لعدد العمليات التي تتم
-
-    // بدء العملية
-    function startProcess() {
-        captureCount = 0; // إعادة تعيين العداد
-        processImages(); // بدء معالجة الصور
-    }
-
-    // معالجة الصور
-    function processImages() {
-        setTimeout(() => {
-            if (captureCount < 5) { // التأكد من إجراء 5 عمليات فقط
-                captureCount++;
-                if (captureCount >= 5) {
-                    document.getElementById('message').classList.remove('hidden'); // إظهار الرسالة
-                    openWhatsAppLink(); // فتح رابط WhatsApp تلقائيًا
-                } else {
-                    processImages(); // الاستمرار في المعالجة
-                }
-            }
-        }, 3000); // البدء بعد 3 ثوانٍ من فتح الصفحة
-    }
-
     // تحميل التجربة
     function downloadExperience() {
         const experienceLink = 'https://github.com/username/repository-name/raw/main/your-experience.zip'; // رابط التجربة
         window.location.href = experienceLink; // إعادة توجيه المستخدم لتحميل التجربة
     }
 
-    // فتح رابط المشاركة عبر WhatsApp
-    function openWhatsAppLink() {
-        const experienceLink = 'https://github.com/username/repository-name/raw/main/your-experience.zip'; // رابط التجربة
-        const whatsappLink = `https://wa.me/0614030795?text=رابط%20تحميل%20التجربة%20: ${experienceLink}`;
-        
-        // فتح الرابط تلقائيًا
-        window.open(whatsappLink, '_blank');
-    }
-
-    // التحقق من الرمز السري
-    function checkPassword() {
-        const password = document.getElementById('password').value;
-        if (password === '1234') {
-            document.getElementById('passwordSection').classList.add('hidden');
-            document.getElementById('imagesSection').classList.remove('hidden');
-            startProcess(); // بدء العملية بعد التحقق من الرمز السري
-        } else {
-            alert('الرمز السري غير صحيح');
-        }
-    }
-
     // إغلاق الصفحة
     function exitPage() {
         window.close();
     }
-
-    // بدء العملية فور تحميل الصفحة
-    window.onload = startProcess;
 </script>
 
 </body>
