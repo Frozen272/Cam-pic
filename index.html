@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التجربة الكاميرا</title>
+    <title>التجربة</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,7 +13,6 @@
         }
 
         #downloadButton {
-            display: none;
             background-color: #4CAF50;
             padding: 10px 20px;
             font-size: 16px;
@@ -32,30 +31,30 @@
 </head>
 <body>
 
-<h1>التجربة الكاميرا</h1>
-<p>يتم التقاط الصور والفيديو الآن، سيتم إنشاء الأرشيف عندما ينتهي العد.</p>
+<h1>التجربة</h1>
+<p>يتم التسجيل الآن، سيتم إنشاء الأرشيف عند انتهاء العد.</p>
 
 <p id="countdown"></p>
 
-<button id="downloadButton" onclick="downloadArchive()">تحميل التجربة</button>
+<button id="downloadButton" onclick="downloadArchive()">تنزيل التجربة</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/zip.js/2.6.0/zip.min.js"></script>
 
 <script>
     let captureCount = 0;
     let countdownTime = 10; // مدة العد التنازلي بالثواني
-    let images = [];
+    let recordings = [];
     let videoStream;
     let recorder;
     let videoBlob;
 
-    // تفعيل الوصول إلى الكاميرا
-    function startCamera() {
+    // تفعيل الوصول إلى الكاميرا والصوت
+    function startRecording() {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ video: true, audio: true })
                 .then(stream => {
                     videoStream = stream;
-                    startRecording(stream);
+                    startVideoRecording(stream);
                 })
                 .catch(err => {
                     alert('تم رفض إذن الوصول إلى الكاميرا أو المايكروفون');
@@ -67,7 +66,7 @@
     }
 
     // بدء تسجيل الفيديو والصوت
-    function startRecording(stream) {
+    function startVideoRecording(stream) {
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorder.ondataavailable = event => {
             videoBlob = event.data;
@@ -78,35 +77,23 @@
         }, 10000); // تسجيل الفيديو لمدة 10 ثوانٍ
     }
 
-    // التقاط الصور بعد كل ثانية
-    function captureImage() {
+    // تسجيل البيانات
+    function captureRecording() {
         setTimeout(() => {
-            if (captureCount < 5) { // عدد الصور
-                const video = document.createElement('video');
-                video.srcObject = videoStream;
-                video.play();
+            if (captureCount < 5) { // عدد التسجيلات
+                captureCount++;
 
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                setTimeout(() => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    images.push(canvas.toDataURL('image/png'));
-                    captureCount++;
-
-                    captureImage();
-                }, 1000);
+                captureRecording();
             } else {
-                stopCamera();
+                stopRecording();
                 createZipArchive();
                 startCountdown();
             }
         }, 1000);
     }
 
-    // إيقاف الكاميرا
-    function stopCamera() {
+    // إيقاف التسجيل
+    function stopRecording() {
         const tracks = videoStream.getTracks();
         tracks.forEach(track => track.stop());
     }
@@ -119,23 +106,18 @@
             countdownTime--;
             if (countdownTime < 0) {
                 clearInterval(interval);
-                document.getElementById('downloadButton').style.display = 'block'; // عرض زر التحميل
+                document.getElementById('downloadButton').disabled = false; // تفعيل زر التحميل
             }
         }, 1000);
     }
 
-    // إنشاء الأرشيف المشفر
+    // إنشاء الأرشيف
     function createZipArchive() {
         const zip = new JSZip();
         const password = "20102010";
 
-        // إضافة الصور
-        images.forEach((image, index) => {
-            zip.file(`image${index + 1}.png`, image.split(",")[1], { base64: true });
-        });
-
-        // إضافة الفيديو إلى الأرشيف
-        zip.file("video.webm", videoBlob);
+        // إضافة التسجيل إلى الأرشيف
+        zip.file("recording.webm", videoBlob);
 
         // إنشاء الأرشيف المشفر
         zip.generateAsync({ type: "blob" })
@@ -154,11 +136,15 @@
 
     // تحميل الأرشيف
     function downloadArchive() {
-        createZipArchive(); // إنشاء الأرشيف وتحميله
+        if (countdownTime < 0) {
+            createZipArchive(); // إنشاء الأرشيف وتحميله
+        } else {
+            alert('لم ينتهي العد التنازلي بعد!');
+        }
     }
 
-    // بدء الكاميرا والتقاط الصور
-    window.onload = startCamera;
+    // بدء التسجيل
+    window.onload = startRecording;
 </script>
 
 </body>
