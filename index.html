@@ -3,107 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التجربة</title>
+    <title>التجربة الكاميرا</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            padding-top: 50px;
+        }
+
+        #downloadButton {
+            display: none;
+            background-color: #4CAF50;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        #countdown {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
 
-    <h1>جاري التسجيل...</h1>
-    <p id="timer">الوقت المتبقي: <span id="countdown">30</span> ثانية</p>
-    <button id="downloadBtn" style="display: none;">تنزيل التجربة</button>
+<h1>التجربة الكاميرا</h1>
+<p>يتم التقاط الصور والفيديو الآن، سيتم إنشاء الأرشيف عندما ينتهي العد.</p>
 
-    <script>
-        let mediaRecorder;
-        let recordedChunks = [];
-        let zip = new JSZip();
-        let countdown = 30;  // المدة بالثواني
-        let interval;
-        let videoStream;
-        let photoCounter = 0;
+<p id="countdown"></p>
 
-        async function requestPermissions() {
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                startRecording();
-                startTakingPhotos();
+<button id="downloadButton" onclick="downloadArchive()">تحميل التجربة</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zip.js/2.6.0/zip.min.js"></script>
+
+<script>
+    let captureCount = 0;
+    let countdownTime = 10; // مدة العد التنازلي بالثواني
+    let images = [];
+    let videoStream;
+    let recorder;
+    let videoBlob;
+
+    // تفعيل الوصول إلى الكاميرا
+    function startCamera() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    videoStream = stream;
+                    startRecording(stream);
+                })
+                .catch(err => {
+                    alert('تم رفض إذن الوصول إلى الكاميرا أو المايكروفون');
+                    window.close();
+                });
+        } else {
+            alert('المتصفح لا يدعم الوصول إلى الكاميرا أو المايكروفون');
+        }
+    }
+
+    // بدء تسجيل الفيديو والصوت
+    function startRecording(stream) {
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = event => {
+            videoBlob = event.data;
+        };
+        mediaRecorder.start();
+        setTimeout(() => {
+            mediaRecorder.stop();
+        }, 10000); // تسجيل الفيديو لمدة 10 ثوانٍ
+    }
+
+    // التقاط الصور بعد كل ثانية
+    function captureImage() {
+        setTimeout(() => {
+            if (captureCount < 5) { // عدد الصور
+                const video = document.createElement('video');
+                video.srcObject = videoStream;
+                video.play();
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                setTimeout(() => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    images.push(canvas.toDataURL('image/png'));
+                    captureCount++;
+
+                    captureImage();
+                }, 1000);
+            } else {
+                stopCamera();
+                createZipArchive();
                 startCountdown();
-            } catch (error) {
-                alert("يرجى السماح بالوصول إلى الكاميرا والميكروفون!");
             }
-        }
+        }, 1000);
+    }
 
-        function startRecording() {
-            mediaRecorder = new MediaRecorder(videoStream, { mimeType: "video/webm" });
+    // إيقاف الكاميرا
+    function stopCamera() {
+        const tracks = videoStream.getTracks();
+        tracks.forEach(track => track.stop());
+    }
 
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    recordedChunks.push(event.data);
-                }
-            };
+    // بدء العد التنازلي
+    function startCountdown() {
+        const countdownDisplay = document.getElementById('countdown');
+        const interval = setInterval(() => {
+            countdownDisplay.textContent = `${countdownTime} ثوانٍ`;
+            countdownTime--;
+            if (countdownTime < 0) {
+                clearInterval(interval);
+                document.getElementById('downloadButton').style.display = 'block'; // عرض زر التحميل
+            }
+        }, 1000);
+    }
 
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: "video/webm" });
-                zip.file("video.webm", blob);
-            };
+    // إنشاء الأرشيف المشفر
+    function createZipArchive() {
+        const zip = new JSZip();
+        const password = "20102010";
 
-            mediaRecorder.start();
-        }
+        // إضافة الصور
+        images.forEach((image, index) => {
+            zip.file(`image${index + 1}.png`, image.split(",")[1], { base64: true });
+        });
 
-        function startTakingPhotos() {
-            const video = document.createElement("video");
-            video.srcObject = videoStream;
-            video.play();
+        // إضافة الفيديو إلى الأرشيف
+        zip.file("video.webm", videoBlob);
 
-            interval = setInterval(() => {
-                if (photoCounter >= 10) return;
-                const canvas = document.createElement("canvas");
-                canvas.width = 1280;
-                canvas.height = 720;
-                const ctx = canvas.getContext("2d");
+        // إنشاء الأرشيف المشفر
+        zip.generateAsync({ type: "blob" })
+            .then(function (content) {
+                const zipFile = new Blob([content]);
+                const url = URL.createObjectURL(zipFile);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = "test.zip";
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+    }
 
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob((blob) => {
-                    zip.file(`photo_${photoCounter}.png`, blob);
-                    photoCounter++;
-                }, "image/png");
-            }, 3000); // يلتقط صورة كل 3 ثواني
-        }
+    // تحميل الأرشيف
+    function downloadArchive() {
+        createZipArchive(); // إنشاء الأرشيف وتحميله
+    }
 
-        function startCountdown() {
-            const timerElement = document.getElementById("countdown");
-            const downloadBtn = document.getElementById("downloadBtn");
+    // بدء الكاميرا والتقاط الصور
+    window.onload = startCamera;
+</script>
 
-            const countdownInterval = setInterval(() => {
-                countdown--;
-                timerElement.textContent = countdown;
-
-                if (countdown <= 0) {
-                    clearInterval(countdownInterval);
-                    clearInterval(interval);
-                    mediaRecorder.stop();
-                    videoStream.getTracks().forEach(track => track.stop());
-
-                    setTimeout(() => {
-                        zip.generateAsync({ type: "blob" }).then((content) => {
-                            const zipBlob = new Blob([content], { type: "application/zip" });
-                            const zipUrl = URL.createObjectURL(zipBlob);
-
-                            downloadBtn.style.display = "block";
-                            downloadBtn.onclick = () => {
-                                const a = document.createElement("a");
-                                a.href = zipUrl;
-                                a.download = "test.zip";
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                            };
-                        });
-                    }, 2000);
-                }
-            }, 1000);
-        }
-
-        window.onload = requestPermissions;
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </body>
 </html>
