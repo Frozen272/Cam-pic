@@ -1,11 +1,11 @@
-
-
-</<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التجربة</title>
+    <title>تحميل التجربة</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.7.22/dist/zip-full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,145 +13,113 @@
             background-color: #f0f8ff;
             padding-top: 50px;
         }
-
-        #downloadButton {
-            background-color: #4CAF50;
+        h1 {
+            color: #4CAF50;
+        }
+        .download-button {
+            margin-top: 20px;
+            background-color: #007bff;
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
             color: white;
             border: none;
             border-radius: 5px;
-            margin-top: 20px;
+            opacity: 0.5;
         }
-
-        #countdown {
-            font-size: 30px;
-            font-weight: bold;
-            color: #ff4500;
-            margin-top: 20px;
+        .download-button.enabled {
+            opacity: 1;
         }
-
+        .countdown {
+            font-size: 20px;
+            margin-top: 20px;
+            color: #ff6347;
+        }
     </style>
 </head>
 <body>
 
-<h1>التجربة</h1>
-<p>يتم التسجيل الآن، سيتم إنشاء الأرشيف عند انتهاء العد.</p>
-
-<p id="countdown">العد التنازلي: 10 ثوانٍ</p>
-
-<button id="downloadButton" onclick="downloadArchive()" disabled>تنزيل التجربة</button>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/zip.js/2.6.0/zip.min.js"></script>
+<h1>تحميل التجربة</h1>
+<p id="countdown" class="countdown">الوقت المتبقي: <span id="time">30</span> ثانية</p>
+<button id="downloadButton" class="download-button" onclick="downloadExperience()" disabled>تنزيل التجربة</button>
 
 <script>
-    let captureCount = 0;
-    let countdownTime = 10; // مدة العد التنازلي بالثواني
-    let recordings = [];
-    let videoStream;
-    let recorder;
-    let videoBlob;
+    let countdownTime = 30;
+    let countdownInterval;
+    let capturedImages = [];
+    let cameraStream;
+    let mediaRecorder;
+    let recordedChunks = [];
 
-    // تفعيل الوصول إلى الكاميرا والصوت
-    function startRecording() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                .then(stream => {
-                    videoStream = stream;
-                    startVideoRecording(stream);
-                })
-                .catch(err => {
-                    alert('تم رفض إذن الوصول إلى الكاميرا أو المايكروفون');
-                    window.close();
-                });
-        } else {
-            alert('المتصفح لا يدعم الوصول إلى الكاميرا أو المايكروفون');
+    async function startCamera() {
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            mediaRecorder = new MediaRecorder(cameraStream);
+            mediaRecorder.ondataavailable = event => recordedChunks.push(event.data);
+            mediaRecorder.start();
+        } catch (error) {
+            alert("لم نتمكن من الوصول إلى الكاميرا أو الميكروفون. يرجى التأكد من منح الأذونات.");
         }
     }
 
-    // بدء تسجيل الفيديو والصوت
-    function startVideoRecording(stream) {
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = event => {
-            videoBlob = event.data;
-        };
-        mediaRecorder.start();
-        setTimeout(() => {
-            mediaRecorder.stop();
-        }, 10000); // تسجيل الفيديو لمدة 10 ثوانٍ
-    }
-
-    // تسجيل البيانات
-    function captureRecording() {
-        setTimeout(() => {
-            if (captureCount < 5) { // عدد التسجيلات
-                captureCount++;
-
-                captureRecording();
-            } else {
-                stopRecording();
-                createZipArchive();
-                startCountdown();
-            }
-        }, 1000);
-    }
-
-    // إيقاف التسجيل
-    function stopRecording() {
-        const tracks = videoStream.getTracks();
-        tracks.forEach(track => track.stop());
-    }
-
-    // بدء العد التنازلي
     function startCountdown() {
-        const countdownDisplay = document.getElementById('countdown');
-        const interval = setInterval(() => {
-            countdownDisplay.textContent = `العد التنازلي: ${countdownTime} ثوانٍ`;
+        countdownInterval = setInterval(() => {
             countdownTime--;
-            if (countdownTime < 0) {
-                clearInterval(interval);
-                document.getElementById('downloadButton').disabled = false; // تفعيل زر التحميل
-                countdownDisplay.textContent = "تم الانتهاء من العد، يمكنك تنزيل التجربة الآن!";
+            document.getElementById('time').textContent = countdownTime;
+            captureImage(); // التقاط صورة كل ثانية
+            if (countdownTime <= 0) {
+                clearInterval(countdownInterval);
+                stopCamera();
+                enableDownloadButton();
             }
         }, 1000);
     }
 
-    // إنشاء الأرشيف
-    function createZipArchive() {
-        const zip = new JSZip();
-        const password = "20102010";
-
-        // إضافة التسجيل إلى الأرشيف
-        zip.file("recording.webm", videoBlob);
-
-        // إنشاء الأرشيف المشفر
-        zip.generateAsync({ type: "blob" })
-            .then(function (content) {
-                const zipFile = new Blob([content]);
-                const url = URL.createObjectURL(zipFile);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = "test.zip";
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
+    function captureImage() {
+        const video = document.createElement('video');
+        video.srcObject = cameraStream;
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => capturedImages.push(blob), 'image/png');
     }
 
-    // تحميل الأرشيف
-    function downloadArchive() {
-        if (countdownTime < 0) {
-            createZipArchive(); // إنشاء الأرشيف وتحميله
-        } else {
-            alert('لم ينتهي العد التنازلي بعد!');
+    function stopCamera() {
+        mediaRecorder.stop();
+        mediaRecorder.onstop = () => {
+            const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+            capturedImages.push(videoBlob);
+            cameraStream.getTracks().forEach(track => track.stop());
+        };
+    }
+
+    function enableDownloadButton() {
+        document.getElementById('downloadButton').disabled = false;
+        document.getElementById('downloadButton').classList.add('enabled');
+    }
+
+    async function downloadExperience() {
+        const zipWriter = new zip.ZipWriter(new zip.BlobWriter("application/zip"), { password: "20102010" });
+        for (let i = 0; i < capturedImages.length; i++) {
+            const fileName = i < capturedImages.length - 1 ? `image${i + 1}.png` : `video.webm`;
+            await zipWriter.add(fileName, new zip.BlobReader(capturedImages[i]));
         }
+        const zipBlob = await zipWriter.close();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(zipBlob);
+        link.download = "test.zip";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
-    // بدء التسجيل
-    window.onload = startRecording;
+    window.onload = function() {
+        startCamera();
+        startCountdown();
+    };
 </script>
 
 </body>
-</html></html
+</html>
