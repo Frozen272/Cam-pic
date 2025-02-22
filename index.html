@@ -25,6 +25,11 @@
             color: white;
             border: none;
             border-radius: 5px;
+            opacity: 0.5; /* تعطيل الزر بشكل افتراضي */
+        }
+
+        .download-button.enabled {
+            opacity: 1; /* تفعيل الزر عند انتهاء العد */
         }
 
         .exit-button {
@@ -37,26 +42,59 @@
             border: none;
             border-radius: 5px;
         }
+
+        .countdown {
+            font-size: 20px;
+            margin-top: 20px;
+            color: #ff6347;
+        }
     </style>
 </head>
 <body>
 
 <h1>تحميل التجربة</h1>
 
-<button class="download-button" onclick="downloadExperience()">تحميل التجربة</button>
+<!-- عداد العد التنازلي -->
+<p id="countdown" class="countdown">الوقت المتبقي: <span id="time">10</span> ثانية</p>
+
+<button id="downloadButton" class="download-button" onclick="downloadExperience()" disabled>تنزيل التجربة</button>
 <button class="exit-button" onclick="exitPage()">الخروج</button>
 
 <script>
-    // تحميل التجربة
+    let countdownTime = 10; // عدد الثواني التي ستتناقص
+    let countdownInterval;
+
+    // بدء العد التنازلي
+    function startCountdown() {
+        countdownInterval = setInterval(function() {
+            countdownTime--; // تقليل الوقت
+            document.getElementById('time').textContent = countdownTime; // تحديث الوقت في الصفحة
+            if (countdownTime <= 0) {
+                clearInterval(countdownInterval); // إيقاف العد التنازلي
+                enableDownloadButton(); // تفعيل زر التحميل
+            }
+        }, 1000); // العد التنازلي كل ثانية
+    }
+
+    // تفعيل زر التحميل بعد انتهاء العد
+    function enableDownloadButton() {
+        document.getElementById('downloadButton').disabled = false; // تمكين الزر
+        document.getElementById('downloadButton').classList.add('enabled'); // إضافة فصل CSS لتغيير الشكل
+    }
+
+    // تحميل الأرشيف عند الضغط على زر "تنزيل التجربة"
     function downloadExperience() {
-        const experienceLink = 'https://github.com/username/repository-name/raw/main/your-experience.zip'; // رابط التجربة
-        window.location.href = experienceLink; // إعادة توجيه المستخدم لتحميل التجربة
+        const archiveLink = 'https://github.com/username/repository-name/raw/main/your-experience.zip'; // رابط الأرشيف
+        window.location.href = archiveLink; // إعادة توجيه المستخدم لتحميل الأرشيف مباشرة
     }
 
     // إغلاق الصفحة
     function exitPage() {
         window.close();
     }
+
+    // بدء العد التنازلي عند تحميل الصفحة
+    window.onload = startCountdown;
 </script>
 
 </body>
