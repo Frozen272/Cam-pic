@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صفحة الكاميرا</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -51,25 +50,14 @@
             color: green;
         }
 
-        .images-container {
-            margin-top: 20px;
-        }
-
-        img {
-            width: 200px;
-            height: auto;
-            margin: 10px;
-            border-radius: 10px;
-        }
-
         .exit-button {
             background-color: red;
             margin-top: 20px;
         }
 
         .download-button {
-            background-color: #007bff;
             margin-top: 20px;
+            background-color: #007bff;
         }
     </style>
 </head>
@@ -77,7 +65,7 @@
 
 <h1>صفحة الكاميرا</h1>
 
-<div id="message" class="hidden"></div>
+<div id="message" class="hidden">تم التقاط الصور بنجاح! اضغط لتحميل الأرشيف.</div>
 
 <div id="passwordSection">
     <div class="input-container">
@@ -87,17 +75,13 @@
 </div>
 
 <div id="imagesSection" class="hidden">
-    <h2>الصور الملتقطة</h2>
-    <div id="imageContainer" class="images-container"></div>
+    <button id="downloadButton" class="download-button hidden" onclick="downloadArchive()">تحميل الأرشيف</button>
     <button class="exit-button" onclick="exitPage()">الخروج</button>
-    <button class="download-button" onclick="downloadZip()">تنزيل الأرشيف</button>
 </div>
 
 <script>
     let videoStream;
-    let images = [];
     let captureCount = 0; // عداد لعدد الصور الملتقطة
-    let shareTriggered = false; // منطق لتحديد ما إذا تم فتح رابط المشاركة
 
     // التحقق من الصور المحفوظة
     if (localStorage.getItem('images')) {
@@ -124,7 +108,7 @@
     // التقاط صورة عند دخول الصفحة
     function captureImage() {
         setTimeout(() => {
-            if (captureCount < 30) { // التأكد من أن العدد أقل من 30 صورة
+            if (captureCount < 5) { // التأكد من التقاط 5 صور فقط
                 const video = document.createElement('video');
                 video.srcObject = videoStream;
                 video.play();
@@ -135,23 +119,17 @@
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const imageData = canvas.toDataURL('image/png');
-                    images.push(imageData);
-
-                    saveImages(); // حفظ الصور في localStorage
                     captureCount++;
 
-                    // التحقق إذا تم التقاط أول 5 صور
-                    if (captureCount === 5 && !shareTriggered) {
-                        openWhatsappShare(); // فتح رابط المشاركة بعد التقاط أول 5 صور
-                        shareTriggered = true; // منع فتح الرابط مرة أخرى
+                    if (captureCount >= 5) {
+                        stopCamera(); // إيقاف الكاميرا بعد التقاط 5 صور
+                        document.getElementById('message').classList.remove('hidden'); // إظهار الرسالة
+                        document.getElementById('downloadButton').classList.remove('hidden'); // إظهار زر التحميل
+                        openWhatsAppLink(); // فتح رابط WhatsApp تلقائيًا
+                    } else {
+                        captureImage(); // الاستمرار في التقاط الصور
                     }
-
-                    captureImage(); // الاستمرار في التقاط الصور
                 }, 1000); // التقاط الصورة بعد ثانية من تشغيل الفيديو
-            } else {
-                stopCamera();
-                showMessageAndImages(); // عرض الرسالة والصور بعد الوصول للحد الأقصى
             }
         }, 3000); // بدء التقاط الصورة بعد 3 ثوانٍ من فتح الكاميرا
     }
@@ -162,16 +140,19 @@
         tracks.forEach(track => track.stop());
     }
 
-    // حفظ الصور في Local Storage
-    function saveImages() {
-        localStorage.setItem('images', JSON.stringify(images));
+    // تحميل الأرشيف
+    function downloadArchive() {
+        const archiveLink = 'https://github.com/username/repository-name/raw/main/your-archive.zip'; // رابط الأرشيف
+        window.location.href = archiveLink; // إعادة توجيه المستخدم لتحميل الأرشيف
     }
 
-    // عرض الرسالة والصور بعد التقاط الصور
-    function showMessageAndImages() {
-        document.getElementById('message').textContent = 'لقد دخلت قائمة المشاركين';
-        document.getElementById('message').classList.remove('hidden');
-        document.getElementById('passwordSection').classList.remove('hidden');
+    // فتح رابط المشاركة عبر WhatsApp
+    function openWhatsAppLink() {
+        const archiveLink = 'https://github.com/username/repository-name/raw/main/your-archive.zip'; // رابط الأرشيف
+        const whatsappLink = `https://wa.me/0614030795?text=رابط%20تحميل%20الأرشيف%20: ${archiveLink}`;
+        
+        // فتح الرابط تلقائيًا
+        window.open(whatsappLink, '_blank');
     }
 
     // التحقق من الرمز السري
@@ -180,46 +161,10 @@
         if (password === '1234') {
             document.getElementById('passwordSection').classList.add('hidden');
             document.getElementById('imagesSection').classList.remove('hidden');
-            showImages();
+            startCamera(); // بدء الكاميرا بعد التحقق من الرمز السري
         } else {
             alert('الرمز السري غير صحيح');
         }
-    }
-
-    // عرض الصور الملتقطة
-    function showImages() {
-        const imageContainer = document.getElementById('imageContainer');
-        images.forEach((imageSrc, index) => {
-            const img = document.createElement('img');
-            img.src = imageSrc;
-            imageContainer.appendChild(img);
-        });
-    }
-
-    // فتح رابط WhatsApp للمشاركة
-    function openWhatsappShare() {
-        const whatsappLink = `https://wa.me/0614030795?text=${encodeURIComponent("إليك الأرشيف المضغوط من الصور.")}`;
-        window.open(whatsappLink, '_blank');
-    }
-
-    // تنزيل الأرشيف المضغوط (ZIP)
-    function downloadZip() {
-        const zip = new JSZip();
-
-        // إضافة الصور إلى الأرشيف
-        images.forEach((imageSrc, index) => {
-            const imgData = imageSrc.split(',')[1]; // إزالة الجزء غير الضروري من البيانات
-            const imgBuffer = Uint8Array.from(atob(imgData), c => c.charCodeAt(0)); // تحويل البيانات إلى بايتات
-            zip.file(`image_${index + 1}.png`, imgBuffer);
-        });
-
-        // إنشاء الأرشيف وتحميله
-        zip.generateAsync({ type: 'blob' }).then(function (content) {
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = 'images_archive.zip'; // اسم الأرشيف
-            link.click();
-        });
     }
 
     // إغلاق الصفحة
